@@ -45,10 +45,9 @@ module Merkle
       else
         # ~ Height and root of the *full* binary subtree with maximum
         # ~ possible length containing the rightmost leaf
-        last_leaf = @leaves[-1]
-
-        # TODO Find the last_subroot
-        last_subroot = last_leaf
+        len = @leaves.length
+        least_significant_one = Math.log2(len & -len).to_i
+        last_subroot = @leaves[-1].descendant(least_significant_one)
 
         @leaves << new_leaf
         @nodes << new_leaf
