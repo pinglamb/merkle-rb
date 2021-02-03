@@ -2,6 +2,8 @@
 
 module Merkle
   class Encoder
+    attr_reader :encoding, :security
+
     def encode(left, right = nil)
       prefix_0, prefix_1 = @security ? ["\x00", "\x01"] : ['', '']
 

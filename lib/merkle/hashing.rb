@@ -5,6 +5,8 @@ require 'digest'
 module Merkle
   # Encapsulates the hash utilities used across the library
   class Hashing < Encoder
+    attr_reader :algorithm
+
     # Core hash utility
     # Renamed to .digest as .hash is reserved in Ruby
     def digest(left, right = nil)

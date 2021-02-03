@@ -37,7 +37,7 @@ module Merkle
     end
 
     def update(record: nil, digest: nil)
-      new_leaf = Leaf.new(@hashing, @encoding, record, digest)
+      new_leaf = Leaf.new(@hashing, encoding, record, digest)
       if empty?
         @leaves << new_leaf
         @nodes << new_leaf
@@ -56,7 +56,7 @@ module Merkle
           old_child = last_subroot.child
 
           # Create bifurcation node
-          new_node = Node.new(@hashing, @encoding, last_subroot, new_leaf)
+          new_node = Node.new(@hashing, encoding, last_subroot, new_leaf)
           @nodes << new_node
 
           # Interject bifurcation node
@@ -71,7 +71,7 @@ module Merkle
             current_node = current_node.child
           end
         else
-          new_node = Node.new(@hashing, @encoding, last_subroot, new_leaf)
+          new_node = Node.new(@hashing, encoding, last_subroot, new_leaf)
           @nodes << new_node
           @root = new_node
         end
@@ -84,12 +84,33 @@ module Merkle
       @root = nil
     end
 
+    def pp
+      <<~STR
+      hash-type : #{@hashing.algorithm}
+      encoding  : #{encoding}
+      security  : #{security ? 'ACTIVATED' : 'DEACTIVATED'}
+
+      root-hash : #{empty? ? '[None]' : root_hash}
+
+      length    : #{length}
+      size      : #{size}
+      height    : #{height}
+      STR
+    end
+
+    def encoding
+      @hashing.encoding
+    end
+
+    def security
+      @hashing.security
+    end
+
     private
 
     def initialize(*records, algorithm: Digest::SHA256, encoding: 'utf-8', security: true)
       # Hashing configuration
       @hashing = Hashing.new(algorithm: algorithm, encoding: encoding, security: security)
-      @encoding = encoding
 
       # Tree generation
       @leaves = []

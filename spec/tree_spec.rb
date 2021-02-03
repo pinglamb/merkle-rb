@@ -175,4 +175,36 @@ RSpec.describe Merkle::Tree do
       expect { tree.root }.to raise_error(Merkle::EmptyTreeException)
     end
   end
+
+  describe '#pp' do
+    it 'works for empty tree' do
+      tree = Merkle::Tree.new(algorithm: Digest::SHA512, encoding: 'utf-16', security: false)
+      expect(tree.pp).to eq <<~STR
+        hash-type : Digest::SHA512
+        encoding  : UTF-16
+        security  : DEACTIVATED
+
+        root-hash : [None]
+
+        length    : 0
+        size      : 0
+        height    : 0
+        STR
+    end
+
+    it 'works for not empty tree' do
+      tree = Merkle::Tree.new(*%w[first second third])
+      expect(tree.pp).to eq <<~STR
+        hash-type : Digest::SHA256
+        encoding  : UTF-8
+        security  : ACTIVATED
+
+        root-hash : #{tree.root_hash}
+
+        length    : 3
+        size      : 5
+        height    : 2
+        STR
+    end
+  end
 end
