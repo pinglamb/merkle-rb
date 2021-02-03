@@ -5,7 +5,7 @@ require 'set'
 
 module Merkle
   class Tree
-    attr_reader :hashing
+    attr_reader :hashing, :leaves, :nodes
 
     def empty?
       @nodes.empty?
@@ -47,13 +47,32 @@ module Merkle
         # ~ possible length containing the rightmost leaf
         last_leaf = @leaves[-1]
 
+        # TODO Find the last_subroot
+        last_subroot = last_leaf
+
         @leaves << new_leaf
         @nodes << new_leaf
 
-        if last_leaf.parent?
-          raise 'TODO'
+        if last_subroot.parent?
+          old_child = last_subroot.child
+
+          # Create bifurcation node
+          new_node = Node.new(@hashing, @encoding, last_subroot, new_leaf)
+          @nodes << new_node
+
+          # Interject bifurcation node
+          old_child.right = new_node
+          new_node.child = old_child
+
+          # Recalculate hashes only at the rightmost branch of the tree
+          current_node = old_child
+          loop do
+            current_node.recalculate_hash(@hashing)
+            break unless current_node.parent?
+            current_node = current_node.child
+          end
         else
-          new_node = Node.new(@hashing, @encoding, last_leaf, new_leaf)
+          new_node = Node.new(@hashing, @encoding, last_subroot, new_leaf)
           @nodes << new_node
           @root = new_node
         end
