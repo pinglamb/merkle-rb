@@ -207,4 +207,31 @@ RSpec.describe Merkle::Tree do
         STR
     end
   end
+
+  describe '#pt' do
+    it 'works for empty tree' do
+      tree = Merkle::Tree.new
+      expect(tree.pt).to eq <<~STR
+      └─[None]
+      STR
+    end
+
+    it 'works for one leaf tree' do
+      tree = Merkle::Tree.new('first')
+      expect(tree.pt).to eq <<~STR
+      \s└─a1af030231ca2fd20ecf30c5294baf8f69321d09bb16ac53885ccd17a385280d
+      STR
+    end
+
+    it 'works for three leaves tree' do
+      tree = Merkle::Tree.new(*%w[first second third])
+      expect(tree.pt).to eq <<~STR
+      \s└─2427940ec5c9197add5f33423ba3971c3524f4b78f349ee45094b52d0d550fea
+           ├──a84762b529735022ce1d7bdc3f24e94aba96ad8b3f6e4866bca76899da094df3
+           │    ├──a1af030231ca2fd20ecf30c5294baf8f69321d09bb16ac53885ccd17a385280d
+           │    └──a94dd4d3c2c6d2548ca4e560d72727bab5d795500191f5b85579130dd3b14603
+           └──656d3e8f544238cdf6e32d640f51ba0914959b14edd7a52d0b8b99ab4c8ac6c6
+      STR
+    end
+  end
 end

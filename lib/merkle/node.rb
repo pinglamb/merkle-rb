@@ -1,6 +1,11 @@
 # frozen_string_literal: true
 
 module Merkle
+  L_BRACKET_SHORT = "\u2514\u2500" # └─
+  L_BRACKET_LONG = "\u2514\u2500\u2500" # └──
+  T_BRACKET = "\u251C\u2500\u2500" # ├──
+  VERTICAL_BAR = "\u2502" # │
+
   class NodeBase
     attr_reader :encoding
 
@@ -47,6 +52,39 @@ module Merkle
         raise NoDescendantException unless parent?
         child.descendant(degree - 1)
       end
+    end
+
+    def pt(level: 0, indent: 3, ignore: [])
+      output = ''
+      if level == 0
+        if !left_parent? && !right_parent?
+          # root case
+          output += " #{L_BRACKET_SHORT}"
+        end
+      else
+        output += ' ' * (indent + 1)
+      end
+      (1...level).each do |l|
+        if !ignore.include?(l)
+          output += " #{VERTICAL_BAR}"
+        else
+          output += ' ' * 2
+        end
+        output += ' ' * indent
+      end
+      new_ignore = ignore.dup
+      output += " #{T_BRACKET}" if left_parent?
+      if right_parent?
+        output += " #{L_BRACKET_LONG}"
+        new_ignore << level
+      end
+      output += "#{digest}\n"
+      unless is_a?(Leaf)
+        output += left.pt(level: level + 1, indent: indent, ignore: new_ignore)
+        output += right.pt(level: level + 1, indent: indent, ignore: new_ignore)
+      end
+
+      output
     end
 
     private

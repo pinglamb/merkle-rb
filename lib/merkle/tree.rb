@@ -36,6 +36,14 @@ module Merkle
       len == 0 ? 0 : Math.log2(len).ceil
     end
 
+    def encoding
+      @hashing.encoding
+    end
+
+    def security
+      @hashing.security
+    end
+
     def update(record: nil, digest: nil)
       new_leaf = Leaf.new(@hashing, encoding, record, digest)
       if empty?
@@ -98,12 +106,8 @@ module Merkle
       STR
     end
 
-    def encoding
-      @hashing.encoding
-    end
-
-    def security
-      @hashing.security
+    def pt(indent: 3)
+      empty? ? "\u2514\u2500[None]\n" : root.pt(indent: indent)
     end
 
     private
