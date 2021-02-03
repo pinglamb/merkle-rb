@@ -1,10 +1,38 @@
 # frozen_string_literal: true
 
-MESSAGE = 'oculusnonviditnecaurisaudivit'
+require 'digest'
 
 RSpec.describe Merkle::Hashing do
-  it 'digests single string' do
-    hashing = Merkle::Hashing.new
-    expect(hashing.digest(MESSAGE)).to eq('667573952e62c6e89303a1ba5a91372933a24324c0d8bb702f7d7d54c4c36b2a')
+  MESSAGE = 'oculusnonviditnecaurisaudivit'
+
+  ALGORITHMS = [Digest::MD5, Digest::SHA256, Digest::SHA384, Digest::SHA512]
+  ENCODINGS = %w[ascii utf-8 utf-16 utf-32]
+
+  [true, false].each do |security|
+    ALGORITHMS.each do |algorithm|
+      ENCODINGS.each do |encoding|
+        hashing = Merkle::Hashing.new(algorithm: algorithm, encoding: encoding, security: security)
+
+        it "digests single string [#{algorithm}, #{encoding}, #{security}]" do
+          if security
+            expect(hashing.digest(MESSAGE)).to eq(algorithm.hexdigest("\x00#{MESSAGE}".force_encoding(encoding)))
+          else
+            expect(hashing.digest(MESSAGE)).to eq(algorithm.hexdigest("#{MESSAGE}".force_encoding(encoding)))
+          end
+        end
+
+        it "digests double string [#{algorithm}, #{encoding}, #{security}]" do
+          if security
+            expect(hashing.digest(MESSAGE, MESSAGE)).to eq(
+              algorithm.hexdigest("\x01#{MESSAGE}\x01#{MESSAGE}".force_encoding(encoding))
+            )
+          else
+            expect(hashing.digest(MESSAGE, MESSAGE)).to eq(
+              algorithm.hexdigest("#{MESSAGE}#{MESSAGE}".force_encoding(encoding))
+            )
+          end
+        end
+      end
+    end
   end
 end
