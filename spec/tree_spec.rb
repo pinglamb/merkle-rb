@@ -39,6 +39,18 @@ RSpec.describe Merkle::Tree do
     end
   end
 
+  describe '#commitment' do
+    it 'works for empty tree' do
+      tree = Merkle::Tree.new
+      expect(tree.commitment).to be_nil
+    end
+
+    it 'works for tree with three leaves' do
+      tree = Merkle::Tree.new('first record', 'second record', 'third record')
+      expect(tree.commitment).to eq(tree.root_hash)
+    end
+  end
+
   describe 'properties' do
     it 'works for empty tree' do
       tree = Merkle::Tree.new

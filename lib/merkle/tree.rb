@@ -21,6 +21,14 @@ module Merkle
       @root.digest
     end
 
+    def commitment
+      begin
+        root_hash
+      rescue EmptyTreeException
+        nil
+      end
+    end
+
     def length
       @leaves.length
     end
@@ -83,6 +91,72 @@ module Merkle
           @nodes << new_node
           @root = new_node
         end
+      end
+    end
+
+    # Detects the (zero-based) index of the leftmost leaf which stores the provided checksum
+    def index(checksum)
+      @leaves.index { |leaf| left.digest == checksum }
+    end
+
+    # Low-level audit proof
+    def audit_path(index)
+      raise NoPathException if index.nil? || index < 0
+
+      unless current_node = @leaves[index]
+        raise NoPathException
+      end
+
+      path = [[current_node.right_parent? ? -1 : 1, current_node.digest]]
+      start = 0
+      loop do
+        break unless current_node.parent?
+        current_child = current_node.child
+
+        if current_node.left_parent?
+          next_digest = current_child.right.digest
+          path.append([current_child.left_parent? ? +1 : -1, next_digest])
+        else
+          next_digest = current_child.left.digest
+          path.prepend([current_child.right_parent? ? -1 : +1, next_digest])
+          start += 1
+        end
+
+        current_node = current_child
+      end
+
+      [start, path]
+    end
+
+    def audit_proof(checksum, commit: false)
+      index = index(checksum)
+      commitment = commit ? self.commitment : nil
+      proof_index, audit_path =
+        begin
+          audit_path(index)
+        rescue NoPathException
+          [-1, []]
+        end
+
+      Proof.new(
+        algorithm: @hashing.algorithm,
+        encoding: @hashing.encoding,
+        security: @hashing.security,
+        commitment: commitment,
+        proof_index: proof_index,
+        proof_path: audit_path
+      )
+    end
+
+    def consistency_proof(subhash, commit: false)
+      raise 'hello'
+    end
+
+    def merkle_proof(challenge, commit: true)
+      if challenge.audit?
+        audit_proof(challenge.checksum, commit: commit)
+      else
+        consistency_proof(challenge.subhash, commit: commit)
       end
     end
 
