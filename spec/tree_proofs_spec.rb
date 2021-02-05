@@ -1,6 +1,32 @@
 # frozen_string_literal: true
 
 RSpec.describe Merkle::Tree do
+  describe '#merkle_proof' do
+    context 'for audit proof' do
+      before :each do
+        @tree = Merkle::Tree.new(*(0...666).collect { |i| "#{i}-th record" })
+      end
+
+      it 'works for item in tree' do
+        challenge = Merkle::Challenge.new(checksum: @tree.hashing.digest('100-th record'))
+        proof = @tree.merkle_proof(challenge)
+        expected_proof = @tree.audit_proof(challenge.checksum)
+        expect(proof.commitment).to eq(@tree.root_hash)
+        expect(proof.proof_index).to eq(expected_proof.proof_index)
+        expect(proof.proof_path).to eq(expected_proof.proof_path)
+      end
+
+      it 'works for item not in tree' do
+        challenge = Merkle::Challenge.new(checksum: @tree.hashing.digest('anything non recorded...'))
+        proof = @tree.merkle_proof(challenge)
+        expected_proof = @tree.audit_proof(challenge.checksum)
+        expect(proof.commitment).to eq(@tree.root_hash)
+        expect(proof.proof_index).to eq(expected_proof.proof_index)
+        expect(proof.proof_path).to eq(expected_proof.proof_path)
+      end
+    end
+  end
+
   describe '#audit_path' do
     tree0 = Merkle::Tree.new
     tree1 = Merkle::Tree.new(*%w[a])

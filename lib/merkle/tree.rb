@@ -96,7 +96,7 @@ module Merkle
 
     # Detects the (zero-based) index of the leftmost leaf which stores the provided checksum
     def index(checksum)
-      @leaves.index { |leaf| left.digest == checksum }
+      @leaves.index { |leaf| leaf.digest == checksum }
     end
 
     # Low-level audit proof

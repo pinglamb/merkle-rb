@@ -9,7 +9,7 @@ module Merkle
       raise NoTargetError unless target ||= @proof.commitment
 
       raise InvalidMerkleProof if @proof.proof_index == -1 && @proof.proof_path.empty?
-      raise InvalidMerkleProof if target != @hashing.multi_hash(@proof.proof_path, @proof.proof_index)
+      raise InvalidMerkleProof if target != @hashing.multi_digest(@proof.proof_path, @proof.proof_index)
     end
 
     private

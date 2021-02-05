@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Merkle
   class Challenge
     attr_reader :checksum, :subhash

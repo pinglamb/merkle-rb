@@ -2,11 +2,12 @@
 
 module Merkle
   class Proof
-    attr_reader :algorithm, :encoding, :security, :commitment, :proof_index, :audit_path
+    attr_reader :algorithm, :encoding, :security, :commitment, :proof_index, :proof_path
 
-    def valid?
+    def valid?(target: nil)
+      target ||= commitment
       begin
-        Validator.new(self).run
+        Validator.new(self).run(target: target)
         true
       rescue InvalidMerkleProof
         false
