@@ -94,6 +94,60 @@ module Merkle
       end
     end
 
+    def merkle_proof(challenge, commit: true)
+      if challenge.audit?
+        audit_proof(challenge.checksum, commit: commit)
+      else
+        consistency_proof(challenge.subhash, commit: commit)
+      end
+    end
+
+    def audit_proof(checksum, commit: false)
+      index = index(checksum)
+      commitment = commit ? self.commitment : nil
+      proof_index, audit_path =
+        begin
+          audit_path(index)
+        rescue NoPathException
+          [-1, []]
+        end
+
+      Proof.new(
+        algorithm: @hashing.algorithm,
+        encoding: @hashing.encoding,
+        security: @hashing.security,
+        commitment: commitment,
+        proof_index: proof_index,
+        proof_path: audit_path
+      )
+    end
+
+    def consistency_proof(subhash, commit: false)
+      commitment = commit ? self.commitment : nil
+
+      proof_index, proof_path = -1, []
+      (1..length).each do |sublength|
+        begin
+          proof_index, left_path, full_path = consistency_path(sublength)
+          if subhash == hashing.multi_digest(left_path, left_path.length - 1)
+            proof_path = full_path
+            break
+          end
+        rescue NoPathException
+          next
+        end
+      end
+
+      Proof.new(
+        algorithm: @hashing.algorithm,
+        encoding: @hashing.encoding,
+        security: @hashing.security,
+        commitment: commitment,
+        proof_index: proof_index,
+        proof_path: proof_path
+      )
+    end
+
     # Detects the (zero-based) index of the leftmost leaf which stores the provided checksum
     def index(checksum)
       @leaves.index { |leaf| leaf.digest == checksum }
@@ -128,36 +182,114 @@ module Merkle
       [start, path]
     end
 
-    def audit_proof(checksum, commit: false)
-      index = index(checksum)
-      commitment = commit ? self.commitment : nil
-      proof_index, audit_path =
+    # Detects in corresponding order the roots of the successive, leftmost,
+    # full binary subtrees of maximum (and thus decreasing) length, whose
+    # lengths sum up to the provided argument. Detected nodes are prepended
+    # with a sign (+1 or -1), carrying information for subsequent generation
+    # of consistency proofs.
+    def principal_subroots(sublength)
+      raise NoPrincipalSubroots if sublength.nil? || sublength < 0
+
+      principal_subroots = []
+      powers = Helper.decompose(sublength)
+      start = 0
+      powers.each do |power|
         begin
-          audit_path(index)
-        rescue NoPathException
-          [-1, []]
+          subroot = subroot(start, power)
+        rescue NoSubtreeException
+          raise NoPrincipalSubroots
         end
 
-      Proof.new(
-        algorithm: @hashing.algorithm,
-        encoding: @hashing.encoding,
-        security: @hashing.security,
-        commitment: commitment,
-        proof_index: proof_index,
-        proof_path: audit_path
-      )
-    end
+        begin
+          child = subroot.child
+          grandchild = child.child
 
-    def consistency_proof(subhash, commit: false)
-      raise 'hello'
-    end
+          principal_subroots << child.left_parent? ? [+1, subroot] : [-1, subroot]
+        rescue NoChildException
+          principal_subroots << subroot.left_parent? ? [+1, subroot] : [-1, subroot]
+        end
 
-    def merkle_proof(challenge, commit: true)
-      if challenge.audit?
-        audit_proof(challenge.checksum, commit: commit)
-      else
-        consistency_proof(challenge.subhash, commit: commit)
+        start += 2**power
       end
+
+      principal_subroots[-1] = [+1, principal_subroots[-1][1]] if principal_subroots.length > 0
+
+      principal_subroots
+    end
+
+    # Detects the root of the unique full binary subtree with leftmost
+    # leaf located at position *start* and height equal to *height*.
+    def subroot(start, height)
+      raise NoSubtreeException unless start < @leaves.length
+
+      subroot = @leaves[start]
+      i = 0
+      while i < height
+        raise NoSubtreeException unless subroot.parent?
+
+        next_node = subroot.child
+        raise NoSubtreeException unless next_node.left == subroot
+
+        subroot = subroot.child
+        i += 1
+      end
+
+      # Verify existence of *full* binary subtree
+      right_parent = subroot
+      i = 0
+      while i < height
+        raise NoSubtreeException if right_parent.is_a?(Leaf)
+        right_parent = right_parent.right
+        i += 1
+      end
+
+      subroot
+    end
+
+    def minimal_complement(subroots)
+      return principal_subroots(length) if subroots.length == 0
+
+      complement = []
+      loop do
+        subroot = subroots[-1][1]
+        break unless subroot.parent?
+
+        if subroot.left_parent?
+          complement << [subroot.child.right_parent? ? -1 : 1, subroot.child.right]
+          subroots.pop(1)
+        else
+          subroots.pop(2)
+        end
+        subroots << [+1, subroot.child]
+      end
+
+      complement
+    end
+
+    # Low-level consistency proof
+    def consistency_path(sublength)
+      raise NoPathException if sublength.nil? || sublength < 0 || length == 0
+
+      begin
+        left_subroots = principal_subroots(sublength)
+      rescue NoPrincipalSubroots
+        raise NoPathException
+      end
+
+      right_subroots = minimal_complement(left_subroots)
+      all_subroots = left_subroots + right_subroots
+      if !right_subroots.empty? || !left_subroots.empty?
+        all_subroots.collect! { |subroot| [-1, subroot[1]] }
+        proof_index = all_subroots.length - 1
+      else
+        proof_index = left_subroots.length - 1
+      end
+
+      # Collect sign-hash pairs
+      left_path = left_subroots.collect { |subroot| [-1, subroot[1].digest] }
+      full_path = all_subroots.collect { |subroot| [subroot[0], subroot[1].digest] }
+
+      [proof_index, left_path, full_path]
     end
 
     def clear

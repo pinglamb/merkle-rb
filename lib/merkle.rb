@@ -8,6 +8,7 @@ require_relative 'merkle/tree'
 require_relative 'merkle/proof'
 require_relative 'merkle/challenge'
 require_relative 'merkle/validator'
+require_relative 'merkle/helper'
 
 module Merkle
   class UnsupportedHashType < StandardError; end
@@ -23,4 +24,6 @@ module Merkle
   class NoTargetError < StandardError; end
   class InvalidMerkleProof < StandardError; end
   class EmptyPathException < StandardError; end
+  class NoPrincipalSubroots < StandardError; end
+  class NoSubtreeException < StandardError; end
 end
