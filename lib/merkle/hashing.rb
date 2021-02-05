@@ -33,7 +33,7 @@ module Merkle
         end
         signed_digests[i] = [new_sign, new_hash]
         signed_digests.delete_at(i + move)
-        i -= move if move < 0
+        i -= 1 if move < 0
       end
 
       signed_digests[0][1]
