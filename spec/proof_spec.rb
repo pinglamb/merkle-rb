@@ -20,16 +20,37 @@ RSpec.describe Merkle::Proof do
               )
 
             context 'for audit proof' do
-              tree.length.times do |index|
-                it "works for valid proof for #{index}-th record [#{algorithm}, #{encoding}, #{security}]" do
+              (0...tree.length).each do |index|
+                it "works for #{index}-th record in tree-#{tree.length} [#{algorithm}, #{encoding}, #{security}]" do
                   proof = tree.audit_proof(tree.hashing.digest("#{index}-th record"))
                   expect(proof).to be_valid(target: tree.root_hash)
                 end
               end
 
-              it 'works for invalid proof' do
+              it "is invalid for invalid proof for tree-#{tree.length} [#{algorithm}, #{encoding}, #{security}]" do
                 proof = tree.audit_proof(tree.hashing.digest('anything that has not been recorded'))
                 expect(proof).not_to be_valid(target: tree.root_hash)
+              end
+            end
+
+            context 'for consistency proof' do
+              (1..tree.length).each do |sublength|
+                it "works for subtree-#{sublength} in tree-#{tree.length} [#{algorithm}, #{encoding}, #{security}]" do
+                  subtree =
+                    Merkle::Tree.new(
+                      *(0...sublength).collect { |i| "#{i}-th record" },
+                      algorithm: algorithm,
+                      encoding: encoding,
+                      security: security
+                    )
+                  proof = tree.consistency_proof(subtree.root_hash)
+                  expect(proof).to be_valid(target: tree.root_hash)
+                end
+
+                it "is invalid for invalid proof for tree-#{tree.length} [#{algorithm}, #{encoding}, #{security}]" do
+                  proof = tree.consistency_proof('anything except for the right hash')
+                  expect(proof).not_to be_valid(target: tree.root_hash)
+                end
               end
             end
           end

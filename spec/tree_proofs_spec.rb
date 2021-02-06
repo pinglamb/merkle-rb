@@ -2,11 +2,11 @@
 
 RSpec.describe Merkle::Tree do
   describe '#merkle_proof' do
-    context 'for audit proof' do
-      before :each do
-        @tree = Merkle::Tree.new(*(0...666).collect { |i| "#{i}-th record" })
-      end
+    before :each do
+      @tree = Merkle::Tree.new(*(0...666).collect { |i| "#{i}-th record" })
+    end
 
+    context 'for audit proof' do
       it 'works for item in tree' do
         challenge = Merkle::Challenge.new(checksum: @tree.hashing.digest('100-th record'))
         proof = @tree.merkle_proof(challenge)
@@ -23,6 +23,19 @@ RSpec.describe Merkle::Tree do
         expect(proof.commitment).to eq(@tree.root_hash)
         expect(proof.proof_index).to eq(expected_proof.proof_index)
         expect(proof.proof_path).to eq(expected_proof.proof_path)
+      end
+    end
+
+    context 'for consistency proof' do
+      it 'works for subroot in tree' do
+        challenge = Merkle::Challenge.new(subhash: @tree.root_hash)
+
+        1000.times { |i| @tree.update(record: "#{i}-th record") }
+
+        proof = @tree.merkle_proof(challenge)
+        expected_proof = @tree.consistency_proof(challenge.subhash)
+        expect(proof.commitment).to eq(@tree.root_hash)
+        expect(proof.proof_index).to eq(expected_proof.proof_index)
       end
     end
   end

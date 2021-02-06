@@ -128,8 +128,9 @@ module Merkle
       proof_index, proof_path = -1, []
       (1..length).each do |sublength|
         begin
-          proof_index, left_path, full_path = consistency_path(sublength)
+          index, left_path, full_path = consistency_path(sublength)
           if subhash == hashing.multi_digest(left_path, left_path.length - 1)
+            proof_index = index
             proof_path = full_path
             break
           end
