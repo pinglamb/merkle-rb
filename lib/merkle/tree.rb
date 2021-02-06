@@ -182,41 +182,6 @@ module Merkle
       [start, path]
     end
 
-    # Detects in corresponding order the roots of the successive, leftmost,
-    # full binary subtrees of maximum (and thus decreasing) length, whose
-    # lengths sum up to the provided argument. Detected nodes are prepended
-    # with a sign (+1 or -1), carrying information for subsequent generation
-    # of consistency proofs.
-    def principal_subroots(sublength)
-      raise NoPrincipalSubroots if sublength.nil? || sublength < 0
-
-      principal_subroots = []
-      powers = Helper.decompose(sublength)
-      start = 0
-      powers.each do |power|
-        begin
-          subroot = subroot(start, power)
-        rescue NoSubtreeException
-          raise NoPrincipalSubroots
-        end
-
-        begin
-          child = subroot.child
-          grandchild = child.child
-
-          principal_subroots << child.left_parent? ? [+1, subroot] : [-1, subroot]
-        rescue NoChildException
-          principal_subroots << subroot.left_parent? ? [+1, subroot] : [-1, subroot]
-        end
-
-        start += 2**power
-      end
-
-      principal_subroots[-1] = [+1, principal_subroots[-1][1]] if principal_subroots.length > 0
-
-      principal_subroots
-    end
-
     # Detects the root of the unique full binary subtree with leftmost
     # leaf located at position *start* and height equal to *height*.
     def subroot(start, height)
@@ -246,9 +211,47 @@ module Merkle
       subroot
     end
 
+    # Detects in corresponding order the roots of the successive, leftmost,
+    # full binary subtrees of maximum (and thus decreasing) length, whose
+    # lengths sum up to the provided argument. Detected nodes are prepended
+    # with a sign (+1 or -1), carrying information for subsequent generation
+    # of consistency proofs.
+    def principal_subroots(sublength)
+      raise NoPrincipalSubroots if sublength.nil? || sublength < 0
+
+      principal_subroots = []
+      powers = Helper.decompose(sublength)
+      start = 0
+      powers.each do |power|
+        begin
+          subroot = subroot(start, power)
+        rescue NoSubtreeException
+          raise NoPrincipalSubroots
+        end
+
+        begin
+          child = subroot.child
+          grandchild = child.child
+
+          principal_subroots << (child.left_parent? ? [+1, subroot] : [-1, subroot])
+        rescue NoChildException
+          principal_subroots << (subroot.left_parent? ? [+1, subroot] : [-1, subroot])
+        end
+
+        start += 2**power
+      end
+
+      principal_subroots[-1] = [+1, principal_subroots[-1][1]] if principal_subroots.length > 0
+
+      principal_subroots
+    end
+
+    # Complements optimally from the right the provided sequence of subroots,
+    # so that a full consistency-path be subsequently generated.
     def minimal_complement(subroots)
       return principal_subroots(length) if subroots.length == 0
 
+      subroots = subroots.dup
       complement = []
       loop do
         subroot = subroots[-1][1]
@@ -278,7 +281,7 @@ module Merkle
 
       right_subroots = minimal_complement(left_subroots)
       all_subroots = left_subroots + right_subroots
-      if !right_subroots.empty? || !left_subroots.empty?
+      if right_subroots.empty? || left_subroots.empty?
         all_subroots.collect! { |subroot| [-1, subroot[1]] }
         proof_index = all_subroots.length - 1
       else
