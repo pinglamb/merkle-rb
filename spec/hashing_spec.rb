@@ -5,12 +5,9 @@ require 'digest'
 RSpec.describe Merkle::Hashing do
   MESSAGE = 'oculusnonviditnecaurisaudivit'
 
-  ALGORITHMS = [Digest::MD5, Digest::SHA256, Digest::SHA384, Digest::SHA512]
-  ENCODINGS = %w[ascii utf-8 utf-16 utf-32]
-
   [true, false].each do |security|
-    ALGORITHMS.each do |algorithm|
-      ENCODINGS.each do |encoding|
+    MerkleTest::ALGORITHMS.each do |algorithm|
+      MerkleTest::ENCODINGS.each do |encoding|
         hashing = Merkle::Hashing.new(algorithm: algorithm, encoding: encoding, security: security)
 
         describe '#digest' do

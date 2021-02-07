@@ -149,6 +149,18 @@ module Merkle
       )
     end
 
+    # Verifies that the provided parameter corresponds to a valid previous
+    # state of the Merkle-tree
+    def include?(subhash)
+      (1..length).each do |sublength|
+        left_roots = principal_subroots(sublength)
+        left_path = left_roots.collect { |subroot| [-1, subroot[1].digest] }
+        return true if subhash == hashing.multi_digest(left_path, left_path.size - 1)
+      end
+
+      false
+    end
+
     # Detects the (zero-based) index of the leftmost leaf which stores the provided checksum
     def index(checksum)
       @leaves.index { |leaf| leaf.digest == checksum }

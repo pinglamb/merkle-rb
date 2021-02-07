@@ -3,13 +3,10 @@
 RSpec.describe Merkle::Proof do
   MAX_LENGTH = 4
 
-  ALGORITHMS = [Digest::MD5, Digest::SHA256, Digest::SHA384, Digest::SHA512]
-  ENCODINGS = %w[ascii utf-8 utf-16 utf-32]
-
   describe '#valid?' do
     [true, false].each do |security|
-      ALGORITHMS.each do |algorithm|
-        ENCODINGS.each do |encoding|
+      MerkleTest::ALGORITHMS.each do |algorithm|
+        MerkleTest::ENCODINGS.each do |encoding|
           (1..MAX_LENGTH).each do |length|
             tree =
               Merkle::Tree.new(

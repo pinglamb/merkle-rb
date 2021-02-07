@@ -13,3 +13,8 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 end
+
+module MerkleTest
+  ALGORITHMS = [Digest::MD5, Digest::SHA256, Digest::SHA384, Digest::SHA512]
+  ENCODINGS = %w[ascii utf-8 utf-16 utf-32]
+end
